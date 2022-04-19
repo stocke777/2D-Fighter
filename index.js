@@ -76,13 +76,14 @@ class Fighter extends Sprite {
         this.lastKey
         this.isAttacking
         this.sprites = sprites
+        this.isDead = false
 
         this.attackBox = {
             position: {
                 x: this.position.x,
                 y: this.position.y
             },
-            width: 100,
+            width: 200,
             height: 50
         }
 
@@ -104,10 +105,26 @@ class Fighter extends Sprite {
     }
 
     switchSprite(sprite){
+        console.log(sprite)
+        
+        if( this.image === this.sprites.death.image){
+            if (this.framesCurrent===this.sprites.death.framesMax - 1){
+            console.log(this.framesCurrent, this.sprites.death.framesMax-1)
+            this.isDead = true
+            }
+            return
+        }
+
         if(
             this.image === this.sprites.attack1.image &&
             this.framesCurrent < this.sprites.attack1.framesMax - 1) return
+        
+        if(
+            this.image === this.sprites.take_hit.image &&
+            this.framesCurrent < this.sprites.take_hit.framesMax - 1) return
 
+        
+        
         switch(sprite){
             case 'idle':
                 if(this.image !== this.sprites.idle.image)
@@ -146,13 +163,31 @@ class Fighter extends Sprite {
                     this.framesMax = this.sprites.attack1.framesMax
                 }
                 break
+            case 'take_hit':
+                if(this.image !== this.sprites.take_hit.image){
+                    this.framesCurrent = 0
+                    this.image = this.sprites.take_hit.image
+                    this.framesMax = this.sprites.take_hit.framesMax
+                }
+                break
+            case 'death':
+                console.log('DEATHHHHHHHHHH')
+                if(this.image !== this.sprites.death.image){
+                    this.framesCurrent = 0
+                    this.image = this.sprites.death.image
+                    this.framesMax = this.sprites.death.framesMax
+                    }
+                break
         }
     }
 
     update(){
         this.draw()
-        this.animateFrames()
+        if(!this.isDead){
+            this.animateFrames()
+        }
         
+        c.fillRect(this.attackBox.position.x, this.attackBox.position.y, this.attackBox.width, this.attackBox.height)
 
         this.position.x += this.velocity.x
         this.position.y += this.velocity.y
@@ -193,7 +228,7 @@ const shop = new Sprite({
 const player = new Fighter({
     position: {
         x: 0,
-        y: 0
+        y: 120
     },
     velocity: {
         x: 0,
@@ -223,24 +258,65 @@ const player = new Fighter({
         attack1: {
             imageSrc: './samuraiMack/Attack1.png',
             framesMax: 6
+        },
+        take_hit: {
+            imageSrc: './samuraiMack/Take Hit.png',
+            framesMax: 4
+        },
+        death: {
+            imageSrc: './samuraiMack/Death.png',
+            framesMax: 6
         }
     }
 })
 
 const enemy = new Fighter({
     position: {
-        x: 100,
-        y: 400
+        x: 400,
+        y: 120
     },
     velocity: {
         x: 0,
         y: 0
     },
-    color: "blue"
+    color: "blue",
+    imageSrc: './kenji/Idle.png',
+    scale: 2.5,
+    framesMax: 4,
+    sprites: {
+        idle: {
+            imageSrc: './kenji/Idle.png',
+            framesMax: 4
+        },
+        run: {
+            imageSrc: './kenji/Run.png',
+            framesMax: 8
+        },
+        jump: {
+            imageSrc: './kenji/Jump.png',
+            framesMax: 2
+        },
+        fall: {
+            imageSrc: './kenji/Fall.png',
+            framesMax: 2
+        },
+        attack1: {
+            imageSrc: './kenji/Attack1.png',
+            framesMax: 4
+        },
+        take_hit: {
+            imageSrc: './kenji/Take hit.png',
+            framesMax: 3
+        },
+        death: {
+            imageSrc: './kenji/Death.png',
+            framesMax: 7
+        }
+    }
 })
 
 player.draw()
-// enemy.draw()
+enemy.draw()
 
 const keys = {
     a: {
@@ -263,14 +339,21 @@ function decreaseTimer(){
     if(timer > 0){
         timer--
         document.querySelector('#timer').innerHTML = timer
-    }else{
+    }else if(!WINNER){
         findWinner()
     }
 }
 decreaseTimer()
 
-function displayWinner(winner){
-    console.log(winner)
+let WINNER
+function displayWinner(win){
+    console.log(win)
+    WINNER = win
+    c.font = "50px Comic Sans MS";
+    c.fillStyle = "white";
+    c.textAlign = "center";
+    c.fillText(WINNER, canvas.width/2, canvas.height/2);
+
 }
 
 function findWinner(){
@@ -301,10 +384,10 @@ function findWinner(){
 
 function detectCollision(box1, box2){
     return (
-        box1.attackBox.position.x + box1.attackBox.width >=box2.position.x &&
-        box1.attackBox.position.x <= box2.position.x + box2.width &&
-        box1.attackBox.position.y + box1.attackBox.height >= box2.position.y &&
-        box1.attackBox.position.y <= box2.position.y + box2.height
+        box1.attackBox.position.x + box1.attackBox.width >=box2.attackBox.position.x &&
+        box1.attackBox.position.x <= box2.attackBox.position.x + box2.attackBox.width &&
+        box1.attackBox.position.y + box1.attackBox.height >= box2.attackBox.position.y &&
+        box1.attackBox.position.y <= box2.attackBox.position.y + box2.attackBox.height
     )
 }
 
@@ -317,11 +400,12 @@ function animate(){
     background.update()
     shop.update()
     player.update()
-    // enemy.update()
+    enemy.update()
+    if(WINNER)
+        displayWinner(WINNER)
 
     player.velocity.x = 0
     
-
     if (keys.a.pressed && player.lastKey === 'a'){
         player.velocity.x = -2
         player.switchSprite('run')
@@ -337,36 +421,56 @@ function animate(){
     } else if(player.velocity.y>0){
         player.switchSprite('fall')
     }
+
     
     enemy.velocity.x = 0
     if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft'){
         enemy.velocity.x = -2
+        enemy.switchSprite('run')
     }else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight'){
         enemy.velocity.x = 2
+        enemy.switchSprite('run')
+    }else{
+        enemy.switchSprite('idle')
+    }
+
+    if(enemy.velocity.y < 0){
+        enemy.switchSprite('jump')
+    } else if(enemy.velocity.y>0){
+        enemy.switchSprite('fall')
     }
 
 
     if (detectCollision(player, enemy) && player.isAttacking){   
         player.isAttacking = false
         console.log("player attacked")
+        
 
         width = document.getElementById('enemyHealth').style.width
         width = width.substring(0, width.length - 1)
         document.getElementById('enemyHealth').style.width = String(Number(width)-20) + '%'
+        console.log(String(Number(width)-20) + '%')
         if(Number(width)-20===0){
-            displayWinner("PLAYER WON")
+            enemy.switchSprite('death')
+            WINNER = "PLAYER WON"
+        }else{
+            enemy.switchSprite('take_hit')
         }
     }
 
     if(detectCollision(enemy, player) && enemy.isAttacking){
         enemy.isAttacking = false
         console.log("enemy attacked")
+        
 
         width = document.getElementById('playerHealth').style.width
         width = width.substring(0, width.length - 1)
         document.getElementById('playerHealth').style.width = String(Number(width)-20) + '%'
         if(Number(width)-20===0){
-            displayWinner("ENEMY WON")
+            player.switchSprite('death')
+            WINNER = "ENEMY WON"
+        }else{
+            player.switchSprite('take_hit')
         }
     }
     
@@ -375,6 +479,11 @@ function animate(){
 animate()
 
 window.addEventListener('keydown', (event) => {
+
+    if(player.isDead || enemy.isDead){
+        return
+    }
+
     switch (event.key){
         case 'd':
             keys.d.pressed = true
