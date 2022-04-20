@@ -1,3 +1,4 @@
+// Canvas where the images will be drawn
 const canvas = document.querySelector('canvas');
 const c = canvas.getContext('2d')
 
@@ -10,6 +11,7 @@ const gravity = 0.5
 
 //////////////////////////////////////////////////////////////
 
+// SPRITES
 class Sprite {
     constructor({position, imageSrc, scale = 1, framesMax = 1, offset = {x:0, y:0}}){
         this.position = position
@@ -23,6 +25,7 @@ class Sprite {
         this.offset = offset
     }
 
+    // Animate image frames based on framesHold which works as animation speed controller
     animateFrames(){
         this.framesElapsed++
 
@@ -35,6 +38,7 @@ class Sprite {
         }
     }
 
+    // draw current frame of the image
     draw(){
         c.drawImage(
             this.image, 
@@ -105,8 +109,8 @@ class Fighter extends Sprite {
     }
 
     switchSprite(sprite){
-        console.log(sprite)
         
+        // if current image is of death and on its last frame, kill the player
         if( this.image === this.sprites.death.image){
             if (this.framesCurrent===this.sprites.death.framesMax - 1){
             console.log(this.framesCurrent, this.sprites.death.framesMax-1)
@@ -115,16 +119,18 @@ class Fighter extends Sprite {
             return
         }
 
+        // If current image is attack, dont interupt it
         if(
             this.image === this.sprites.attack1.image &&
             this.framesCurrent < this.sprites.attack1.framesMax - 1) return
         
+        // If current image is take_hit, dont interupt it
         if(
             this.image === this.sprites.take_hit.image &&
             this.framesCurrent < this.sprites.take_hit.framesMax - 1) return
 
         
-        
+        // different animation types
         switch(sprite){
             case 'idle':
                 if(this.image !== this.sprites.idle.image)
@@ -171,7 +177,7 @@ class Fighter extends Sprite {
                 }
                 break
             case 'death':
-                console.log('DEATHHHHHHHHHH')
+                
                 if(this.image !== this.sprites.death.image){
                     this.framesCurrent = 0
                     this.image = this.sprites.death.image
@@ -192,7 +198,7 @@ class Fighter extends Sprite {
         this.position.x += this.velocity.x
         this.position.y += this.velocity.y
 
-        
+        // hitbox either left facing or right facing based on lastkey
         if(this.lastKey === 'd' || this.lastKey === 'ArrowRight'){
             this.attackBox.position.x = this.position.x
             this.attackBox.position.y = this.position.y
@@ -201,6 +207,7 @@ class Fighter extends Sprite {
             this.attackBox.position.y = this.position.y
         }
 
+        //  gravity function
         if (this.position.y + this.height + this.velocity.y >= canvas.height - 300){
             this.velocity.y = 0
         }else this.velocity.y += gravity
@@ -318,6 +325,7 @@ const enemy = new Fighter({
 player.draw()
 enemy.draw()
 
+// keeping track of pressed keys
 const keys = {
     a: {
         pressed: false
@@ -333,6 +341,7 @@ const keys = {
     }
 }
 
+// timer function
 let timer = 10
 function decreaseTimer(){
     setTimeout(decreaseTimer, 1000)
@@ -345,6 +354,7 @@ function decreaseTimer(){
 }
 decreaseTimer()
 
+// Handling winner 
 let WINNER
 function displayWinner(win){
     console.log(win)
@@ -375,13 +385,12 @@ function findWinner(){
 
     }
 
-    
     timer = 0
     document.querySelector('#timer').innerHTML = timer
 }
 
 
-
+// Collision detect when box1 attacks
 function detectCollision(box1, box2){
     return (
         box1.attackBox.position.x + box1.attackBox.width >=box2.attackBox.position.x &&
@@ -392,20 +401,25 @@ function detectCollision(box1, box2){
 }
 
 
+// loop for animation
 function animate(){
     window.requestAnimationFrame(animate)
+
+    // set background
     c.fillStyle = 'black'
     c.fillRect(0, 0, canvas.width, canvas.height)
 
+    // update all sprites
     background.update()
     shop.update()
     player.update()
     enemy.update()
+
     if(WINNER)
         displayWinner(WINNER)
 
+    // Player movements and animation
     player.velocity.x = 0
-    
     if (keys.a.pressed && player.lastKey === 'a'){
         player.velocity.x = -2
         player.switchSprite('run')
@@ -422,7 +436,7 @@ function animate(){
         player.switchSprite('fall')
     }
 
-    
+    // Enemy movements and animation
     enemy.velocity.x = 0
     if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft'){
         enemy.velocity.x = -2
@@ -441,6 +455,7 @@ function animate(){
     }
 
 
+    // if player attacks and enemy is hit, trigger enemy animations
     if (detectCollision(player, enemy) && player.isAttacking){   
         player.isAttacking = false
         console.log("player attacked")
@@ -458,6 +473,7 @@ function animate(){
         }
     }
 
+    // if enemy attacks and player is hit, trigger player animations
     if(detectCollision(enemy, player) && enemy.isAttacking){
         enemy.isAttacking = false
         console.log("enemy attacked")
@@ -478,12 +494,15 @@ function animate(){
 
 animate()
 
+// tracking keys
 window.addEventListener('keydown', (event) => {
 
+    // if anyone dead, dont take input
     if(player.isDead || enemy.isDead){
         return
     }
 
+    // Player keys
     switch (event.key){
         case 'd':
             keys.d.pressed = true
@@ -500,7 +519,7 @@ window.addEventListener('keydown', (event) => {
             player.attack()
             break
 
-
+    // Enemy Keys
         case 'ArrowLeft':
             keys.ArrowLeft.pressed = true
             enemy.lastKey = 'ArrowLeft'
@@ -517,6 +536,7 @@ window.addEventListener('keydown', (event) => {
             break
     }
 })
+
 
 window.addEventListener('keyup', (event) => {
     switch (event.key){
